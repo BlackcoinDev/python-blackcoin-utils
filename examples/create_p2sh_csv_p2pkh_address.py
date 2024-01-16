@@ -18,7 +18,7 @@ from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
 
 def main():
     # always remember to setup the network
-    setup("testnet")
+    setup("mainnet")
 
     #
     # This script creates a P2SH address containing a CHECKSEQUENCEVERIFY plus
@@ -31,7 +31,7 @@ def main():
     seq = Sequence(TYPE_RELATIVE_TIMELOCK, relative_blocks)
 
     # secret key corresponding to the pubkey needed for the P2SH (P2PKH) transaction
-    p2pkh_sk = PrivateKey("cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9")
+    p2pkh_sk = PrivateKey("PgxxTGsyU2L7iD9HemZk8bjVCSjYyDNqiM2TJdAjr5VuLnZLjYJB")
 
     # get the address (from the public key)
     p2pkh_addr = p2pkh_sk.get_public_key().get_address()

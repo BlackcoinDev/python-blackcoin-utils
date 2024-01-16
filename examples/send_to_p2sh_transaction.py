@@ -19,7 +19,7 @@ from bitcoinutils.script import Script
 
 def main():
     # always remember to setup the network
-    setup("testnet")
+    setup("mainnet")
 
     #
     # This script creates a P2SH address containing a P2PK script and sends

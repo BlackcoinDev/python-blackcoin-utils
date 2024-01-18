@@ -20,7 +20,7 @@ from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
 
 def main():
     # always remember to setup the network
-    setup("testnet")
+    setup("mainnet")
 
     #
     # This script spends from a P2SH address containing a CSV+P2PKH script as
@@ -32,7 +32,7 @@ def main():
 
     # set values
     relative_blocks = 20
-    txid = "76c102821b916a625bd3f0c3c6e35d5c308b7c23e78b8866b06a3a466041db0a"
+    txid = "9d84b05ecc9bbdffa4590ff7b64602fa2955536331b2d3294fd1501944b35ebd"
     vout = 0
 
     seq = Sequence(TYPE_RELATIVE_TIMELOCK, relative_blocks)
@@ -43,7 +43,7 @@ def main():
     txin = TxInput(txid, vout, sequence=seq_for_n_seq)
 
     # secret key needed to spend P2PKH that is wrapped by P2SH
-    p2pkh_sk = PrivateKey("cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9")
+    p2pkh_sk = PrivateKey("PgxxTGsyU2L7iD9HemZk8bjVCSjYyDNqiM2TJdAjr5VuLnZLjYJB")
     p2pkh_pk = p2pkh_sk.get_public_key().to_hex()
     p2pkh_addr = p2pkh_sk.get_public_key().get_address()
 
@@ -66,8 +66,8 @@ def main():
     # print(addr.to_string())
 
     # send/spend to any random address
-    to_addr = P2pkhAddress("n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR")
-    txout = TxOutput(to_satoshis(11), to_addr.to_script_pub_key())
+    to_addr = P2pkhAddress("B6si6dknPTc1qF9av3AU9awyUAJ3cfiQRu")
+    txout = TxOutput(to_satoshis(0.999), to_addr.to_script_pub_key())
 
     # no change address - the remaining 0.1 tBTC will go to miners)
 

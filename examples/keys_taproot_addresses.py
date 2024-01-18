@@ -15,10 +15,10 @@ from bitcoinutils.keys import P2trAddress, PrivateKey
 
 def main():
     # always remember to setup the network
-    setup("testnet")
+    setup("mainnet")
 
     # could also instantiate from existing WIF key
-    priv = PrivateKey.from_wif("cRPxBiKrJsH94FLugmiL4xnezMyoFqGcf4kdgNXGuypNERhMK6AT")
+    priv = PrivateKey.from_wif("PdiUUh8dnXB36B2XcbPdodUX5Ujoj2VDubJwcW1V8DJu69XHZWGg")
 
     # compressed is the default
     print("\nPrivate key WIF:", priv.to_wif())
@@ -46,11 +46,11 @@ def main():
 
     assert (
         address.to_string()
-        == "tb1pdr8q4tuqqeglxxhkxl3trxt0dy5jrnaqvg0ddwu7plraxvntp8dqv8kvyq"
+        == "blk1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5ssm5w44w"
     )
     assert (
         addr2.to_string()
-        == "tb1pdr8q4tuqqeglxxhkxl3trxt0dy5jrnaqvg0ddwu7plraxvntp8dqv8kvyq"
+        == "blk1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5ssm5w44w"
     )
 
 

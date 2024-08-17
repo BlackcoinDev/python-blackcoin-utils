@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -22,10 +22,10 @@ import hashlib
 from ecdsa import ellipticcurve  # type: ignore
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
 from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
+import struct
 
-
-# TODO rename to Secp256k1Params and clean whatever is not used!
-class EcdsaParams:
+# clean whatever is not used!
+class Secp256k1Params:
     # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
     # This is done modulo p which (secp256k1) is:
     # p is the finite field prime number and is equal to:
@@ -63,10 +63,10 @@ class ControlBlock:
     ----------
     pubkey : PublicKey
         the internal public key object
-    script_to_spend : Script
-        the tapscript leaf that we want to spend
     scripts : list[ list[Script] ]
         a list of list of Scripts describing the merkle tree of scripts to commit
+    merkle_path : bytes
+        the pre-calculated merkle path
 
     Methods
     -------
@@ -76,44 +76,66 @@ class ControlBlock:
         returns the control block as a hexadecimal string
     """
 
-    # TODO TEMP scripts is just the top root th_branch manually calculated!
-    def __init__(self, pubkey: PublicKey, script_to_spend=None, scripts=None):
+    def __init__(self, pubkey: PublicKey, scripts: None | list[list[Script]], index: int, is_odd=False):
         """
         Parameters
         ----------
         pubkey : PublicKey
             the internal public key object
-        script_to_spend : Script (ignored for now)
-            the tapscript leaf that we want to spend
-        scripts : bytes
-            concatenated path (leafs/branches) hashes in bytes
+        scripts : list[list[Script]]
+            a list of list of Scripts describing the merkle tree of scripts to commit
+        index : int
+            the index of the leaf taproot using which to execute the transaction
         """
         self.pubkey = pubkey
-        # script_to_spend is ignored for now - needed for automatically
-        # constructing the merkle path
-        self.script_to_spend = script_to_spend
         self.scripts = scripts
+        self.merkle_path = b"".join(_generate_merkle_path(scripts, index))
+        self.is_odd = is_odd
 
     def to_bytes(self) -> bytes:
-        leaf_version = bytes([LEAF_VERSION_TAPSCRIPT])
-
+        leaf_version = bytes([(1 if self.is_odd else 0) + LEAF_VERSION_TAPSCRIPT])
         # x-only public key is required
         pub_key = bytes.fromhex(self.pubkey.to_x_only_hex())
-
-        merkle_path = b""
-
-        # get merkle path from scripts, if any
-        # TODO currently the manually constructed merkle path is passed
-        if self.scripts:
-            merkle_path = self.scripts  # manually constructed path
-
-        return leaf_version + pub_key + merkle_path
+        return leaf_version + pub_key + self.merkle_path
 
     def to_hex(self):
         """Converts object to hexadecimal string"""
-
         return b_to_h(self.to_bytes())
+    
+def _generate_merkle_path(all_leafs, target_leaf_index):
+    """Generate the merkle path for spending a taproot path.
 
+    Parameters
+    ----------
+    all_leafs : list
+        List of all taproot leaf scripts. Can be nested.
+    target_leaf_index : int
+        Index of the target leaf script for which to generate the merkle path.
+
+    Returns
+    ----------
+    merkle_path : list
+        List of tagged hashes representing the merkle path.
+    """
+    merkle_path = []
+    traversed = 0
+    
+    def traverse_level(level):
+        nonlocal traversed
+        for leaf in level:
+            if isinstance(leaf, list):
+                traverse_level(leaf)
+            else:
+                if traversed == target_leaf_index:
+                    traversed += 1
+                    continue
+                tagged_hash = tapleaf_tagged_hash(leaf)
+                merkle_path.append(tagged_hash)
+                traversed += 1
+    
+    traverse_level(all_leafs)
+    
+    return merkle_path
 
 def get_tag_hashed_merkle_root(
     scripts: None | Script | list[Script] | list[list[Script]],
@@ -124,8 +146,6 @@ def get_tag_hashed_merkle_root(
     Scripts is a list of list of Scripts describing the merkle tree of scripts to commit
     Example of scripts' list:  [ [A, B], C ]
     """
-    # TODO raise errors
-
     # empty scripts or empty list
     if not scripts:
         return b""
@@ -148,8 +168,8 @@ def get_tag_hashed_merkle_root(
             right = get_tag_hashed_merkle_root(scripts[1])
             return tapbranch_tagged_hash(left, right)
         else:
-            # TODO throw exception
-            exit("List cannot have more than 2 branches.")
+            # Raise an error if a branch node contains more than two elements
+            raise ValueError("Invalid Merkle branch: List cannot have more than 2 branches.")
 
 
 def to_satoshis(num: int | float | Decimal):
@@ -161,7 +181,7 @@ def to_satoshis(num: int | float | Decimal):
     return int(round(num * SATOSHIS_PER_BITCOIN))
 
 
-def prepend_varint(data: bytes) -> bytes:
+def prepend_compact_size(data: bytes) -> bytes:
     """
     Counts bytes and returns them with their varint (or compact size) prepended.
     """
@@ -186,18 +206,99 @@ def encode_varint(i: int) -> bytes:
         return b"\xff" + i.to_bytes(8, "little")
     else:
         raise ValueError("Integer is too large: %d" % i)
+    
+def parse_compact_size(data: bytes) -> tuple:
+    """
+    Parse variable integer. Returns (count, size) 
+    """
+    first_byte = data[0]
+    if first_byte < 0xfd:
+        return (first_byte, 1)
+    elif first_byte == 0xfd:
+        return (struct.unpack('<H', data[1:3])[0], 3)
+    elif first_byte == 0xfe:
+        return (struct.unpack('<I', data[1:5])[0], 5)
+    elif first_byte == 0xff:
+        return (struct.unpack('<Q', data[1:9])[0], 9)
+    
+def get_transaction_length(data: bytes) -> int:
+    """
+    Return length of a transaction, including handling for SegWit transactions.
+    """
+    offset = 0
+
+    # Version (4 bytes)
+    offset += 4
+
+    # Check for SegWit marker and flag
+    marker, flag = data[offset], data[offset+1]
+    is_segwit = (marker == 0 and flag != 0)
+    if is_segwit:
+        offset += 2  # Skip marker and flag
+
+    # Number of Inputs (CompactSize)
+    num_inputs, size = parse_compact_size(data[offset:])
+    offset += size
+
+    # Inputs
+    for _ in range(num_inputs):
+        # Previous output (32 bytes + 4 bytes)
+        offset += 36
+        # Script length
+        script_length, size = parse_compact_size(data[offset:])
+        offset += size
+        # Script + sequence number
+        offset += script_length + 4
+
+    # Number of Outputs (CompactSize)
+    num_outputs, size = parse_compact_size(data[offset:])
+    offset += size
+
+    # Outputs
+    for _ in range(num_outputs):
+        # Value (8 bytes)
+        offset += 8
+        # Script length
+        script_length, size = parse_compact_size(data[offset:])
+        offset += size
+        # Script
+        offset += script_length
+
+    # Witness Data
+    if is_segwit:
+        for _ in range(num_inputs):
+            num_witness_items, size = parse_compact_size(data[offset:])
+            offset += size
+            for __ in range(num_witness_items):
+                witness_length, size = parse_compact_size(data[offset:])
+                offset += size + witness_length
+
+    # Lock time (4 bytes)
+    offset += 4
+
+    return offset
 
 
 def is_address_bech32(address: str) -> bool:
     """
     Returns if an address (string) is bech32 or not
-    TODO improve by checking if valid, etc.
     """
-    if address.startswith("bc") or address.startswith("tb"):
-        return True
-
-    return False
-
+    if not address:
+        return False
+    
+    CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+    # Check if the string has valid characters
+    for char in address:
+        if char.lower() not in CHARSET:
+            return False
+    try:
+        hrp, data = address.lower().split("1")
+    except ValueError:
+        return False
+    # Check if the human-readable part (hrp) and data part are of appropriate lengths
+    if len(hrp) < 1 or len(data) < 6:
+        return False
+    return True
 
 def vi_to_int(byteint: bytes) -> Tuple[int, int]:
     """
@@ -215,44 +316,7 @@ def vi_to_int(byteint: bytes) -> Tuple[int, int]:
         size = 4
     else:  # integer of 8 bytes
         size = 8
-
     return int.from_bytes(byteint[1 : 1 + size][::-1], "big"), size + 1
-
-
-# TODO name hex_to_bytes ??
-def to_bytes(string: str, unhexlify: bool = True) -> bytes:
-    """
-    Converts a hex string to bytes
-    """
-    if not string:
-        return b""
-    if unhexlify:
-        try:
-            if isinstance(string, bytes):
-                string = string.decode()
-            s = bytes.fromhex(string)
-            return s
-        except (TypeError, ValueError):
-            pass
-    if isinstance(string, bytes):
-        return string
-    else:
-        return bytes(string, "utf8")
-
-
-def bytes32_from_int(x: int) -> bytes:
-    """
-    Converts int to 32 big-endian bytes
-    """
-    return x.to_bytes(32, byteorder="big")
-
-
-# TODO REMOVE --- NOT USED
-# def int_from_bytes(b: bytes) -> int:
-#    '''
-#    Converts int to bytes
-#    '''
-#    return int.from_bytes(b, byteorder="big")
 
 
 def add_magic_prefix(message: str) -> bytes:
@@ -310,7 +374,7 @@ def calculate_tweak(
 
 def tapleaf_tagged_hash(script: Script) -> bytes:
     """Calculates the tagged hash for a tapleaf"""
-    script_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script.to_bytes())
+    script_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_compact_size(script.to_bytes())
     return tagged_hash(script_part, "TapLeaf")
 
 
@@ -336,7 +400,7 @@ def negate_privkey(key: bytes) -> str:
     else:
         key_secret_exponent = h_to_i(key.hex())
         # negate private key
-        negated_key = EcdsaParams._order - key_secret_exponent
+        negated_key = Secp256k1Params._order - key_secret_exponent
 
     return f"{negated_key:064x}"
 
@@ -350,12 +414,12 @@ def negate_privkey(key: bytes) -> str:
 #
 #    # negate public key if necessary
 #    if y % 2 != 0:
-#        y = EcdsaParams._field - y
+#        y = Secp256k1Params._field - y
 #
 #    return f'{x:064x}{y:064x}'
 
 
-def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> bytes:
+def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> Tuple[bytes, bool]:
     """
     Tweaks the public key with the specified tweak. Required to create the
     taproot public key from the internal key.
@@ -371,18 +435,22 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> bytes:
     # if y is odd then negate y (effectively P) to make it even and equivalent
     # to a 02 compressed pk
     if y % 2 != 0:
-        y = EcdsaParams._field - y
+        y = Secp256k1Params._field - y
     P = (x, y)
 
     # apply tweak to public key (Q = P + th*G)
     Q = point_add(P, (point_mul(G, tweak)))
 
+    # stores if it's odd to correct the control block bit
+    is_odd = False
+
     # negate Q as well before returning ?!?
     if Q[1] % 2 != 0:  # type: ignore
-        Q = (Q[0], EcdsaParams._field - Q[1])  # type: ignore
+        is_odd = True
+        Q = (Q[0], Secp256k1Params._field - Q[1])  # type: ignore
 
     # print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
-    return bytes.fromhex(f"{Q[0]:064x}{Q[1]:064x}")  # type: ignore
+    return bytes.fromhex(f"{Q[0]:064x}{Q[1]:064x}"), is_odd # type: ignore
 
 
 def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
@@ -407,7 +475,7 @@ def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
     # The tweaked private key can be computed by d + hash(P || S)
     # where d is the normal private key, P is the normal public key
     # and S is the alt script, if any (empty script, if none?? TODO)
-    tweaked_privkey_int = (h_to_i(negated_key) + tweak) % EcdsaParams._order
+    tweaked_privkey_int = (h_to_i(negated_key) + tweak) % Secp256k1Params._order
 
     # print(f'Tweaked Private Key:', hex(tweaked_privkey_int)[2:])
     return bytes.fromhex(f"{tweaked_privkey_int:064x}")
@@ -447,10 +515,14 @@ def b_to_i(b: bytes) -> int:
     """Converts a bytes to a number"""
     return int.from_bytes(b, byteorder="big")
 
-
 def i_to_b32(i: int) -> bytes:
     """Converts a integer to bytes"""
     return i.to_bytes(32, byteorder="big")
 
+def i_to_b(i: int) -> bytes:
+    """Converts a integer to bytes"""
+    # determine the number of bytes required to represent the integer
+    byte_length = (i.bit_length() + 7) // 8
+    return i.to_bytes(byte_length, "big")
 
 # TODO are these required - maybe bytestoint and inttobytes are only required?!?

@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -34,11 +34,10 @@ from bitcoinutils.constants import (
 )
 from bitcoinutils.script import Script
 from bitcoinutils.utils import (
-    to_bytes,
     vi_to_int,
     encode_varint,
     tagged_hash,
-    prepend_varint,
+    prepend_compact_size,
     h_to_b,
     b_to_h,
 )
@@ -106,7 +105,18 @@ class TxInput:
         # - note that python's struct uses little-endian by default
         txid_bytes = h_to_b(self.txid)[::-1]
         txout_bytes = struct.pack("<L", self.txout_index)
-        script_sig_bytes = self.script_sig.to_bytes()
+
+        # check if coinbase input add manually to avoid adding the script size,
+        # pushdata, etc since it is just raw data used by the miner (extra nonce,
+        # mining pool, etc.)
+        if self.txid == 64 * "0":
+            script_sig_bytes = h_to_b(
+                self.script_sig.script[0]
+            )  # coinbase has a single element as script_sig
+        # normal input
+        else:
+            script_sig_bytes = self.script_sig.to_bytes()
+
         data = (
             txid_bytes
             + txout_bytes
@@ -143,7 +153,7 @@ class TxInput:
         has_segwit : boolean
             Is the Tx Input segwit or not
         """
-        txinputraw = to_bytes(txinputrawhex)
+        txinputraw = h_to_b(txinputrawhex)
 
         # read the 32 bytes of TxInput ID
         inp_hash = txinputraw[cursor : cursor + 32][::-1]
@@ -157,12 +167,27 @@ class TxInput:
 
         # read the size (bytes length) of the integer representing the size of
         # the Script's raw data and the size of the Script's raw data
-        unlocking_script_size, size = vi_to_int(txinputraw[cursor : cursor + 9])
+        unlocking_script_size, size = vi_to_int(txinputraw[cursor : cursor + 8])
         cursor += size
         unlocking_script = txinputraw[cursor : cursor + unlocking_script_size]
         cursor += unlocking_script_size
         sequence_number = txinputraw[cursor : cursor + 4]
         cursor += 4
+
+        # check if coinbase input (utxo will be all zeros). If it is then do not
+        # parse the script_sig; just pass it as one element (the string miners provided,
+        # typically includes the extra nonce, miner pool, etc.)
+        if inp_hash.hex() == 64 * "0":
+            return (
+                TxInput(
+                    txid=inp_hash.hex(),
+                    txout_index=int(output_n.hex(), 16),
+                    script_sig=Script([unlocking_script.hex()]),
+                    sequence=sequence_number,
+                ),
+                cursor,
+            )
+
         return (
             TxInput(
                 txid=inp_hash.hex(),
@@ -209,7 +234,7 @@ class TxWitnessInput:
         stack_bytes = b""
         for item in self.stack:
             # witness items can only be data items (hex str)
-            item_bytes = prepend_varint(h_to_b(item))
+            item_bytes = prepend_compact_size(h_to_b(item))
             stack_bytes += item_bytes
 
         return stack_bytes
@@ -285,7 +310,7 @@ class TxOutput:
         has_segwit : boolean
             Is the Tx Output segwit or not
         """
-        txoutputraw = to_bytes(txoutputrawhex)
+        txoutputraw = h_to_b(txoutputrawhex)
 
         # read the amount of the TxOutput
         value = int.from_bytes(txoutputraw[cursor : cursor + 8][::-1], "big")
@@ -516,7 +541,7 @@ class Transaction:
         rawtxhex : string (hex)
             The hexadecimal raw string of the Transaction
         """
-        rawtx = to_bytes(rawtxhex)
+        rawtx = h_to_b(rawtxhex)
 
         # read version
         version = rawtx[0:4]
@@ -742,11 +767,6 @@ class Transaction:
                  The type of the signature hash to be created
         """
 
-        # clone transaction to modify without messing up the real transaction
-        # TODO tmp_tx is not really used for its to_bytes() - we can access
-        # self directly
-        tmp_tx = Transaction.copy(self)
-
         # defaults for BIP143
         hash_prevouts = b"\x00" * 32
         hash_sequence = b"\x00" * 32
@@ -762,12 +782,11 @@ class Transaction:
         # Hash all input
         if not anyone_can_pay:
             hash_prevouts = b""
-            for txin in tmp_tx.inputs:
-                # TODO ? <L is 8 bytes, should be 4 bytes <I instead
+            for txin in self.inputs:
                 hash_prevouts += h_to_b(txin.txid)[::-1] + struct.pack(
-                    "<L",
-                    txin.txout_index,
+                    "<I", txin.txout_index
                 )
+
             hash_prevouts = hashlib.sha256(
                 hashlib.sha256(hash_prevouts).digest()
             ).digest()
@@ -775,7 +794,7 @@ class Transaction:
         # Hash all input sequence
         if not anyone_can_pay and sign_all:
             hash_sequence = b""
-            for txin in tmp_tx.inputs:
+            for txin in self.inputs:
                 hash_sequence += txin.sequence
             hash_sequence = hashlib.sha256(
                 hashlib.sha256(hash_sequence).digest()
@@ -784,7 +803,7 @@ class Transaction:
         if sign_all:
             # Hash all output
             hash_outputs = b""
-            for txout in tmp_tx.outputs:
+            for txout in self.outputs:
                 amount_bytes = struct.pack("<q", txout.amount)
                 script_bytes = txout.script_pubkey.to_bytes()
                 hash_outputs += (
@@ -793,9 +812,9 @@ class Transaction:
             hash_outputs = hashlib.sha256(
                 hashlib.sha256(hash_outputs).digest()
             ).digest()
-        elif basic_sig_hash_type == SIGHASH_SINGLE and txin_index < len(tmp_tx.outputs):
+        elif basic_sig_hash_type == SIGHASH_SINGLE and txin_index < len(self.outputs):
             # Hash one output
-            txout = tmp_tx.outputs[txin_index]
+            txout = self.outputs[txin_index]
             amount_bytes = struct.pack("<q", txout.amount)
             script_bytes = txout.script_pubkey.to_bytes()
             hash_outputs = (
@@ -812,12 +831,9 @@ class Transaction:
         tx_for_signing += hash_prevouts + hash_sequence
 
         # add tx outpoint (utxo txid + index)
-        # TODO <L is 8 bytes, should be 4 bytes <I instead
+        # Correcting the struct.pack usage from "<L" to "<I" for explicit 4-byte packing
         txin = self.inputs[txin_index]
-        tx_for_signing += h_to_b(txin.txid)[::-1] + struct.pack(
-            "<L",
-            txin.txout_index,
-        )
+        tx_for_signing += h_to_b(txin.txid)[::-1] + struct.pack("<I", txin.txout_index)
 
         # add tx script code
         tx_for_signing += struct.pack("B", len(script.to_bytes()))
@@ -984,7 +1000,7 @@ class Transaction:
             tx_for_signing += txin_index.to_bytes(4, "little")
 
         # TODO if annex is present it should be added here
-        # length of annex should use prepend_varint (compact_size)
+        # length of annex should use compact_size
 
         # Data about this output
         if sighash_single:
@@ -1004,7 +1020,7 @@ class Transaction:
                 LEAF_VERSION_TAPSCRIPT  # pass as a parameter if a new version comes
             )
             tx_for_signing += tagged_hash(
-                bytes([leaf_ver]) + prepend_varint(script.to_bytes()), "TapLeaf"
+                bytes([leaf_ver]) + prepend_compact_size(script.to_bytes()), "TapLeaf"
             )
 
             # key version - type of public key used for this signature, currently only 0
@@ -1042,7 +1058,7 @@ class Transaction:
         if has_segwit:
             for witness in self.witnesses:
                 # add witnesses script Count
-                witnesses_count_bytes = chr(len(witness.stack)).encode()
+                witnesses_count_bytes = encode_varint(len(witness.stack))
                 data += witnesses_count_bytes
                 data += witness.to_bytes()
         data += self.locktime

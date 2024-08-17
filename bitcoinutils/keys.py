@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -10,6 +10,11 @@
 # LICENSE file.
 
 from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Tuple
+
 import re
 import struct
 import hashlib
@@ -45,9 +50,8 @@ from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.schnorr import schnorr_sign
 from bitcoinutils.transactions import Transaction
 from bitcoinutils.utils import (
-    EcdsaParams,
+    Secp256k1Params,
     calculate_tweak,
-    bytes32_from_int,
     add_magic_prefix,
     h_to_i,
     b_to_h,
@@ -148,7 +152,8 @@ class PrivateKey:
     def _from_bytes(self, b: bytes):
         """Creates a key directly from 32 raw bytes"""
 
-        # TODO check if b is len 32 and raise error
+        if len(b) != 32:
+            raise ValueError("Invalid key length: must be exactly 32 bytes.")
         self.key = SigningKey.from_string(b, curve=SECP256k1)
 
     # expects wif in hex string
@@ -361,7 +366,7 @@ class PrivateKey:
         while length_r == 33:
             signature = self.key.sign_digest_deterministic(
                 tx_digest,
-                extra_entropy=bytes32_from_int(attempt),
+                extra_entropy=i_to_b32(attempt),
                 sigencode=sigencode_der,
                 hashfunc=hashlib.sha256,
             )
@@ -402,7 +407,7 @@ class PrivateKey:
 
         # if length is 33 bytes then it contains a sign and thus is high S
         if length_s == 33:
-            new_S_as_bigint = EcdsaParams._order - S_as_bigint
+            new_S_as_bigint = Secp256k1Params._order - S_as_bigint
             # convert bigint to bytes
             # new_S = h_to_b(i_to_h64(new_S_as_bigint))
             new_S = i_to_b32(new_S_as_bigint)
@@ -536,13 +541,16 @@ class PublicKey:
             If first byte of public key (corresponding to SEC format) is
             invalid.
         """
-        # TODO accepts hex str in any format and handle here!
+        hex_str = hex_str.strip()
+
+        # Normalize hex string by removing '0x' prefix and any whitespace
+        if hex_str.lower().startswith('0x'):
+            hex_str = hex_str[2:]
 
         # expects key as hex string - SEC format
         first_byte_in_hex = hex_str[:2]  # 2 hex chars = 1 byte
         hex_bytes = h_to_b(hex_str)
 
-        # TODO needed?? - see flag below
         taproot = False
 
         # check if compressed or not
@@ -555,7 +563,7 @@ class PublicKey:
         elif len(hex_bytes) > 31:
             # key is either compressed or in x-only taproot format
 
-            # taproot is 32 bytes and it should always be prefixed with 0x02
+            # taproot public keys are exactly 32 bytes
             if len(hex_bytes) == 32:
                 taproot = True
 
@@ -565,7 +573,7 @@ class PublicKey:
 
             # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
             y_values = sqrt_mod(
-                (x_coord**3 + 7) % EcdsaParams._p, EcdsaParams._p, True
+                (x_coord**3 + 7) % Secp256k1Params._p, Secp256k1Params._p, True
             )
 
             assert y_values is not None
@@ -626,7 +634,7 @@ class PublicKey:
 
     def to_taproot_hex(
         self, scripts: Optional[Script | list[Script] | list[list[Script]]] = None
-    ) -> str:
+    ) -> Tuple[str, bool]:
         """Returns the tweaked x coordinate of the public key as a hex string.
 
         Parameters
@@ -640,9 +648,11 @@ class PublicKey:
         tweak_int = calculate_tweak(self, scripts)
 
         # keep x-only coordinate
-        pubkey = tweak_taproot_pubkey(self.key.to_string(), tweak_int)[:32]
+        tweak_and_odd = tweak_taproot_pubkey(self.key.to_string(), tweak_int) 
+        pubkey = tweak_and_odd[0][:32]
+        is_odd = tweak_and_odd[1]
 
-        return pubkey.hex()
+        return pubkey.hex(), is_odd
 
     def is_y_even(self) -> bool:
         """Returns True if the y coordinate of the public key is even and
@@ -710,20 +720,20 @@ class PublicKey:
         #
 
         # get signature's r and s
-        r, s = sigdecode_string(sig[1:], EcdsaParams._order)
+        r, s = sigdecode_string(sig[1:], Secp256k1Params._order)
 
         # ger R's x coordinate
-        x = r + (recid // 2) * EcdsaParams._order
+        x = r + (recid // 2) * Secp256k1Params._order
 
         # get R's y coordinate (y**2 = x**3 + 7)
-        y_values = sqrt_mod((x**3 + 7) % EcdsaParams._p, EcdsaParams._p, True)
+        y_values = sqrt_mod((x**3 + 7) % Secp256k1Params._p, Secp256k1Params._p, True)
         if (y_values[0] - recid) % 2 == 0:  # type: ignore
             y = y_values[0]  # type: ignore
         else:
             y = y_values[1]  # type: ignore
 
         # get R (recovered ephemeral key) from x,y
-        R = ellipticcurve.Point(EcdsaParams._curve, x, y, EcdsaParams._order)
+        R = ellipticcurve.Point(Secp256k1Params._curve, x, y, Secp256k1Params._order)
 
         # get e (encoded message hash as big integer)
         e = b_to_i(message_digest)
@@ -731,9 +741,9 @@ class PublicKey:
         # compute public key Q = r^-1 (sR - eG)
         # because Point substraction is not defined we will instead use:
         # Q = r^-1 (sR + (-eG) )
-        minus_e = -e % EcdsaParams._order
-        inv_r = numbertheory.inverse_mod(r, EcdsaParams._order)
-        Q = inv_r * (s * R + minus_e * EcdsaParams._G)
+        minus_e = -e % Secp256k1Params._order
+        inv_r = numbertheory.inverse_mod(r, Secp256k1Params._order)
+        Q = inv_r * (s * R + minus_e * Secp256k1Params._G)
 
         # instantiate the public key and verify message
         public_key = VerifyingKey.from_public_point(Q, curve=SECP256k1)
@@ -808,9 +818,11 @@ class PublicKey:
         tree
         """
 
-        pubkey = self.to_taproot_hex(scripts)
+        pubkey_and_is_odd = self.to_taproot_hex(scripts)
+        pubkey = pubkey_and_is_odd[0]
+        is_odd = pubkey_and_is_odd[1]
 
-        return P2trAddress(witness_program=pubkey)
+        return P2trAddress(witness_program=pubkey, is_odd=is_odd)
 
 
 class Address(ABC):
@@ -1325,8 +1337,11 @@ class P2trAddress(SegwitAddress):
         address: Optional[str] = None,
         witness_program: Optional[str] = None,  # script=None, ?
         version: str = P2TR_ADDRESS_V1,
+        is_odd: bool = False,
     ) -> None:
         """Allow creation only from witness program"""
+
+        self.odd = is_odd
 
         super().__init__(
             address=address,
@@ -1341,6 +1356,12 @@ class P2trAddress(SegwitAddress):
     def get_type(self) -> str:
         """Returns the type of address"""
         return self.version
+
+    def is_odd(self) -> bool:
+        """Returns True if the y coordinate of the public key is odd and
+        False otherwise."""
+
+        return self.odd
 
 
 def main():

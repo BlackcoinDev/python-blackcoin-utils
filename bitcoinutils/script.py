@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -9,14 +9,13 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-import struct
 import copy
 import hashlib
+import struct
 from typing import Any
 
-from bitcoinutils.utils import to_bytes, vi_to_int, h_to_b, b_to_h
 from bitcoinutils.ripemd160 import ripemd160
-
+from bitcoinutils.utils import b_to_h, h_to_b, vi_to_int
 
 # import bitcoinutils.keys
 
@@ -280,12 +279,6 @@ class Script:
         scripts = copy.deepcopy(script.script)
         return cls(scripts)
 
-    def __str__(self) -> str:
-        return str(self.script)
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
     def _op_push_data(self, data: str) -> bytes:
         """Converts data to appropriate OP_PUSHDATA OP code including length
 
@@ -297,16 +290,13 @@ class Script:
         Also note that according to standarardness rules (BIP-62) the minimum
         possible PUSHDATA operator must be used!
         """
-
-        # expects data in hexadecimal characters and converts appropriately
-        # TODO maybe, for convenience, also accept objects for public keys,
-        # addresses, etc. and use isinstance and convert manually
-        data_bytes = h_to_b(data)
+        
+        data_bytes = h_to_b(data) # Assuming string is hexadecimal
 
         if len(data_bytes) < 0x4C:
-            return chr(len(data_bytes)).encode() + data_bytes
+            return bytes([len(data_bytes)]) + data_bytes
         elif len(data_bytes) < 0xFF:
-            return b"\x4c" + chr(len(data_bytes)).encode() + data_bytes
+            return b"\x4c" + bytes([len(data_bytes)]) + data_bytes
         elif len(data_bytes) < 0xFFFF:
             return b"\x4d" + struct.pack("<H", len(data_bytes)) + data_bytes
         elif len(data_bytes) < 0xFFFFFFFF:
@@ -376,34 +366,45 @@ class Script:
             has_segwit : boolean
                 Is the Tx Input segwit or not
         """
-        scriptraw = to_bytes(scriptrawhex)
+        scriptraw = h_to_b(scriptrawhex)
         commands = []
         index = 0
 
         while index < len(scriptraw):
             byte = scriptraw[index]
             if bytes([byte]) in CODE_OPS:
-                commands.append(CODE_OPS[bytes([byte])])
+                if (
+                    bytes([byte]) != b"\x4c"
+                    and bytes([byte]) != b"\x4d"
+                    and bytes([byte]) != b"\x4e"
+                ):
+                    commands.append(CODE_OPS[bytes([byte])])
                 index = index + 1
                 # handle the 3 special bytes 0x4c,0x4d,0x4e if the transaction is
                 # not segwit type
-            elif has_segwit is False and bytes([byte]) == b"\x4c":
-                bytes_to_read = int.from_bytes(scriptraw[index : index + 1], "little")
-                index = index + 1
-                commands.append(scriptraw[index : index + bytes_to_read].hex())
-                index = index + bytes_to_read
-            elif has_segwit is False and bytes([byte]) == b"\x4d":
-                bytes_to_read = int.from_bytes(scriptraw[index : index + 2], "little")
-                index = index + 2
-                commands.append(scriptraw[index : index + bytes_to_read].hex())
-                index = index + bytes_to_read
-            elif has_segwit is False and bytes([byte]) == b"\x4e":
-                bytes_to_read = int.from_bytes(scriptraw[index : index + 4], "little")
-                index = index + 4
-                commands.append(scriptraw[index : index + bytes_to_read].hex())
-                index = index + bytes_to_read
+                if has_segwit is False and bytes([byte]) == b"\x4c":
+                    bytes_to_read = int.from_bytes(
+                        scriptraw[index : index + 1], "little"
+                    )
+                    index = index + 1
+                    commands.append(scriptraw[index : index + bytes_to_read].hex())
+                    index = index + bytes_to_read
+                elif has_segwit is False and bytes([byte]) == b"\x4d":
+                    bytes_to_read = int.from_bytes(
+                        scriptraw[index : index + 2], "little"
+                    )
+                    index = index + 2
+                    commands.append(scriptraw[index : index + bytes_to_read].hex())
+                    index = index + bytes_to_read
+                elif has_segwit is False and bytes([byte]) == b"\x4e":
+                    bytes_to_read = int.from_bytes(
+                        scriptraw[index : index + 4], "little"
+                    )
+                    index = index + 4
+                    commands.append(scriptraw[index : index + bytes_to_read].hex())
+                    index = index + bytes_to_read
             else:
-                data_size, size = vi_to_int(scriptraw[index : index + 9])
+                data_size, size = vi_to_int(scriptraw[index : index + 8])
                 commands.append(
                     scriptraw[index + size : index + size + data_size].hex()
                 )
@@ -432,3 +433,14 @@ class Script:
         """
         sha256 = hashlib.sha256(self.to_bytes()).digest()
         return Script(["OP_0", b_to_h(sha256)])
+
+    def __str__(self) -> str:
+        return str(self.script)
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __eq__(self, _other: object) -> bool:
+        if not isinstance(_other, Script):
+            return False
+        return self.script == _other.script

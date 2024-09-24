@@ -1,3 +1,3 @@
-pip uninstall -y bitcoin-utils
+pip uninstall -y blackcoin-utils
 python setup.py sdist bdist_wheel
-pip install dist/bitcoin-utils-0.7.1.tar.gz
+pip install dist/blackcoin-utils-0.7.1.tar.gz

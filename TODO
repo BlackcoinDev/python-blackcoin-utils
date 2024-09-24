@@ -1,7 +1,7 @@
 SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
 - python-ecdsa is vulnerable to minerva timing attacks
-  . https://github.com/karask/python-bitcoin-utils/security/dependabot/2
+  . https://github.com/BlackcoinDev/python-blackcoin-utils/security/dependabot/2
   . investigate the consequences (how critical) this is for the library
   . find a python ecdsa implementation that solves this
   . change the code to use the new library

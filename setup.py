@@ -10,7 +10,7 @@ from blackcoinutils import __version__
 with open('README.rst') as readme:
     long_description = readme.read()
 
-setup(name='blackoin-utils',
+setup(name='blackcoin-utils',
       version=__version__,
       description='Blackcoin utility functions',
       long_description=long_description,
@@ -26,7 +26,7 @@ setup(name='blackoin-utils',
           'python-bitcoinrpc>=1.0,<2.0',
           'hdwallet==2.2.1'
       ],
-      packages=['bitcoinutils'],
+      packages=['blackcoinutils'],
       #package_data={
       #    'blackcoinutils': ['requirements.txt']
       #},

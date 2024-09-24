@@ -30,7 +30,7 @@ def main():
     print("Ext. private key:", xprivkey)
     print("Derivation path:", path)
 
-    # get a PrivateKey object used in bitcoinutils throughout
+    # get a PrivateKey object used in blackcoinutils throughout
     privkey = hdw.get_private_key()
     print("WIF:", privkey.to_wif())
 
@@ -54,7 +54,7 @@ def main():
     hdw.from_path(new_path)
     print("\n\nNew derivation path:", new_path)
 
-    # get a PrivateKey object used in bitcoinutils throughout
+    # get a PrivateKey object used in blackcoinutils throughout
     privkey = hdw.get_private_key()
     print("WIF:", privkey.to_wif())
 

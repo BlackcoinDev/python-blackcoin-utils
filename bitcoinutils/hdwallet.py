@@ -76,6 +76,6 @@ class HDWallet:
         self.hdw.from_path(path=path)
 
     def get_private_key(self):
-        """Return a PrivateKey object used throughout bitcoinutils library"""
+        """Return a PrivateKey object used throughout blackcoinutils library"""
 
         return PrivateKey(self.hdw.wif())  # type: ignore

@@ -65,7 +65,7 @@ from blackcoinutils.utils import (
 from blackcoinutils.script import Script
 
 
-import bitcoinutils.bech32
+import blackcoinutils.bech32
 
 
 class PrivateKey:
@@ -1205,7 +1205,7 @@ class SegwitAddress(ABC):
         Uses a segwit's python reference implementation for now. (TODO)
         """
 
-        witness_version, witness_int_array = bitcoinutils.bech32.decode(  # type: ignore
+        witness_version, witness_int_array = blackcoinutils.bech32.decode(  # type: ignore
             NETWORK_SEGWIT_PREFIXES[get_network()], address
         )
         if witness_version is None:
@@ -1237,7 +1237,7 @@ class SegwitAddress(ABC):
         hash_bytes = h_to_b(self.witness_program)
         witness_int_array = memoryview(hash_bytes).tolist()
 
-        return bitcoinutils.bech32.encode(  # type: ignore
+        return blackcoinutils.bech32.encode(  # type: ignore
             NETWORK_SEGWIT_PREFIXES[get_network()],
             self.segwit_num_version,
             witness_int_array,

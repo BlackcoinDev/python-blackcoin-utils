@@ -18,7 +18,7 @@ from typing import Any
 from blackcoinutils.ripemd160 import ripemd160
 from blackcoinutils.utils import b_to_h, h_to_b, vi_to_int
 
-# import bitcoinutils.keys
+# import blackcoinutils.keys
 
 
 # Bitcoin's op codes. Complete list at: https://en.bitcoin.it/wiki/Script

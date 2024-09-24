@@ -40,6 +40,7 @@ from bitcoinutils.utils import (
     prepend_compact_size,
     h_to_b,
     b_to_h,
+    parse_compact_size,
 )
 
 
@@ -155,50 +156,38 @@ class TxInput:
         """
         txinputraw = h_to_b(txinputrawhex)
 
-        # read the 32 bytes of TxInput ID
-        inp_hash = txinputraw[cursor : cursor + 32][::-1]
+        # Unpack transaction ID (hash) in bytes and output index
+        txid, vout = struct.unpack_from('<32sI', txinputraw, cursor)
+        txid = txid[::-1]  # Reverse to match usual hexadecimal order
+        cursor += 36  # 32 bytes for txid and 4 bytes for vout
 
-        if not len(inp_hash):
-            raise Exception(
-                "Input transaction hash not found. Probably malformed raw transaction"
-            )
-        output_n = txinputraw[cursor + 32 : cursor + 36][::-1]
-        cursor += 36
-
-        # read the size (bytes length) of the integer representing the size of
-        # the Script's raw data and the size of the Script's raw data
-        unlocking_script_size, size = vi_to_int(txinputraw[cursor : cursor + 8])
+        # Read the unlocking script size using parse_compact_size
+        unlocking_script_size, size = parse_compact_size(txinputraw[cursor:])
         cursor += size
-        unlocking_script = txinputraw[cursor : cursor + unlocking_script_size]
+
+        # Read the unlocking script in bytes
+        unlocking_script = struct.unpack_from(f'{unlocking_script_size}s', txinputraw, cursor)[0]
         cursor += unlocking_script_size
-        sequence_number = txinputraw[cursor : cursor + 4]
+
+        # Read the sequence number in bytes
+        sequence, = struct.unpack_from('<4s', txinputraw, cursor)
         cursor += 4
 
-        # check if coinbase input (utxo will be all zeros). If it is then do not
-        # parse the script_sig; just pass it as one element (the string miners provided,
-        # typically includes the extra nonce, miner pool, etc.)
-        if inp_hash.hex() == 64 * "0":
-            return (
-                TxInput(
-                    txid=inp_hash.hex(),
-                    txout_index=int(output_n.hex(), 16),
-                    script_sig=Script([unlocking_script.hex()]),
-                    sequence=sequence_number,
-                ),
-                cursor,
-            )
+        # If coinbase input (utxo will be all zeros), handle script differently
+        if txid.hex() == '00' * 32:
+            script_sig = Script([unlocking_script.hex()])  # Treat as single element for coinbase
+        else:
+            script_sig = Script.from_raw(unlocking_script.hex(), has_segwit=has_segwit)
 
-        return (
-            TxInput(
-                txid=inp_hash.hex(),
-                txout_index=int(output_n.hex(), 16),
-                script_sig=Script.from_raw(
-                    unlocking_script.hex(), has_segwit=has_segwit
-                ),
-                sequence=sequence_number,
-            ),
-            cursor,
+        # Create the TxInput instance
+        tx_input = TxInput(
+            txid=txid.hex(),
+            txout_index=vout,
+            script_sig=script_sig,
+            sequence=sequence
         )
+
+        return tx_input, cursor
 
     @classmethod
     def copy(cls, txin: "TxInput") -> "TxInput":
@@ -312,23 +301,28 @@ class TxOutput:
         """
         txoutputraw = h_to_b(txoutputrawhex)
 
-        # read the amount of the TxOutput
-        value = int.from_bytes(txoutputraw[cursor : cursor + 8][::-1], "big")
-        cursor += 8
+        # Unpack the amount of the TxOutput directly in bytes
+        amount_format = "<Q"  # Little-endian unsigned long long (8 bytes)
+        amount, = struct.unpack_from(amount_format, txoutputraw, cursor)
+        cursor += struct.calcsize(amount_format)
 
-        # read the size (bytes length) of the integer representing the size of the
-        # locking Script's raw data and the size of the locking Script's raw data
-        lock_script_size, size = vi_to_int(txoutputraw[cursor : cursor + 9])
+        # Read the locking script size using parse_compact_size
+        lock_script_size, size = parse_compact_size(txoutputraw[cursor:])
         cursor += size
-        lock_script = txoutputraw[cursor : cursor + lock_script_size]
+
+        # Read the locking script
+        script_format = f"{lock_script_size}s"
+        lock_script, = struct.unpack_from(script_format, txoutputraw, cursor)
         cursor += lock_script_size
-        return (
-            TxOutput(
-                amount=value,
-                script_pubkey=Script.from_raw(lock_script.hex(), has_segwit=has_segwit),
-            ),
-            cursor,
+
+        # Create the TxOutput instance
+        tx_output = TxOutput(
+            amount=amount,
+            script_pubkey=Script.from_raw(lock_script.hex(), has_segwit=has_segwit)
         )
+
+        return tx_output, cursor
+
 
     def __str__(self) -> str:
         return str({"amount": self.amount, "script_pubkey": self.script_pubkey})
@@ -534,72 +528,65 @@ class Transaction:
     @staticmethod
     def from_raw(rawtxhex: str):
         """
-        Imports a Transaction from hexadecimal data
+        Imports a Transaction from hexadecimal data.
 
         Attributes
         ----------
         rawtxhex : string (hex)
-            The hexadecimal raw string of the Transaction
+            The hexadecimal raw string of the Transaction.
         """
         rawtx = h_to_b(rawtxhex)
 
-        # read version
+        # Read version (4 bytes)
         version = rawtx[0:4]
-        flag = None
-        has_segwit = False
         cursor = 4
-        if rawtx[4:5] == b"\0":
-            flag = rawtx[5:6]
-            if flag == b"\1":
-                has_segwit = True
-            cursor += 2
 
-        # read the size (bytes length) of the integer representing the size of
-        # the inputs number and the inputs number
+        # Detect and handle SegWit
+        has_segwit = False
+        if rawtx[cursor:cursor + 2] == b'\x00\x01':
+            has_segwit = True
+            cursor += 2  # Skipping past the marker and flag bytes
 
-        n_inputs, size = vi_to_int(rawtx[cursor : cursor + 9])
+        # Read the number of inputs
+        n_inputs, size = parse_compact_size(rawtx[cursor:])
         cursor += size
         inputs = []
 
-        # iterate n_inputs times to read the inputs from raw
-        for index in range(0, n_inputs):
-            inp, cursor = TxInput.from_raw(
-                rawtxhex, cursor=cursor, has_segwit=has_segwit
-            )
+        # Read inputs
+        for _ in range(n_inputs):
+            inp, cursor = TxInput.from_raw(rawtx.hex(), cursor, has_segwit)
             inputs.append(inp)
 
-        outputs = []
-        # read the size (bytes length) of the integer representing the size
-        # of the outputs number and the the outputs number
-        n_outputs, size = vi_to_int(rawtx[cursor : cursor + 9])
+        # Read the number of outputs using parse_compact_size
+        n_outputs, size = parse_compact_size(rawtx[cursor:])
         cursor += size
-        output_total = 0
-        # iterate n_outputs times to read the inputs from raw
-        for index in range(0, n_outputs):
-            output, cursor = TxOutput.from_raw(
-                rawtxhex, cursor=cursor, has_segwit=has_segwit
-            )
+        outputs = []
+
+        # Read outputs
+        for _ in range(n_outputs):
+            output, cursor = TxOutput.from_raw(rawtx.hex(), cursor, has_segwit)
             outputs.append(output)
 
+        # Handle witnesses if SegWit is enabled
         witnesses = []
-        if has_segwit is True:
-            # iterate to read the witnesses for every input
-            for n in range(0, len(inputs)):
-                n_items, size = vi_to_int(rawtx[cursor : cursor + 9])
+        if has_segwit:
+            for _ in range(n_inputs):
+                n_items, size = parse_compact_size(rawtx[cursor:])
                 cursor += size
-                witnesses_tmp: list[str] = []
-                for m in range(0, n_items):
-                    witness = b"\0"
-                    item_size, size = vi_to_int(rawtx[cursor : cursor + 9])
-                    if item_size:
-                        witness = rawtx[cursor + size : cursor + item_size + size]
-                    cursor += item_size + size
-                    witnesses_tmp.append(witness.hex())
+                witnesses_tmp = []
+                for _ in range(n_items):
+                    item_size, size = parse_compact_size(rawtx[cursor:])
+                    cursor += size
+                    witness_data = rawtx[cursor:cursor + item_size]
+                    cursor += item_size
+                    witnesses_tmp.append(witness_data.hex())
                 if witnesses_tmp:
                     witnesses.append(TxWitnessInput(stack=witnesses_tmp))
 
-        locktime = rawtx[cursor : cursor + 4]
+        # Read locktime (4 bytes)
+        locktime = rawtx[cursor:cursor + 4]
 
+        #Returning the Transaction object
         return Transaction(
             inputs=inputs,
             outputs=outputs,

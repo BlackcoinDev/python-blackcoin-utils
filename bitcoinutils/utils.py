@@ -14,15 +14,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from bitcoinutils.keys import PublicKey
-    from bitcoinutils.script import Script
+    from blackcoinutils.keys import PublicKey
+    from blackcoinutils.script import Script
     from decimal import Decimal
     from typing import Tuple
 
 import hashlib
 from ecdsa import ellipticcurve  # type: ignore
-from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
-from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
+from blackcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
+from blackcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
 import struct
 
 # clean whatever is not used!

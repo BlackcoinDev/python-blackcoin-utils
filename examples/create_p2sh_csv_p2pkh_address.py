@@ -10,11 +10,11 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from bitcoinutils.setup import setup
-from bitcoinutils.transactions import Sequence
-from bitcoinutils.keys import P2shAddress, PrivateKey
-from bitcoinutils.script import Script
-from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
+from blackcoinutils.setup import setup
+from blackcoinutils.transactions import Sequence
+from blackcoinutils.keys import P2shAddress, PrivateKey
+from blackcoinutils.script import Script
+from blackcoinutils.constants import TYPE_RELATIVE_TIMELOCK
 
 
 def main():

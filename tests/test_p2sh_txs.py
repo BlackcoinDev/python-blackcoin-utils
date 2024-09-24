@@ -13,12 +13,12 @@
 
 import unittest
 
-from bitcoinutils.setup import setup
-from bitcoinutils.keys import PrivateKey, P2pkhAddress
-from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
-from bitcoinutils.transactions import TxInput, TxOutput, Transaction, Sequence
-from bitcoinutils.script import Script
-from bitcoinutils.utils import to_satoshis
+from blackcoinutils.setup import setup
+from blackcoinutils.keys import PrivateKey, P2pkhAddress
+from blackcoinutils.constants import TYPE_RELATIVE_TIMELOCK
+from blackcoinutils.transactions import TxInput, TxOutput, Transaction, Sequence
+from blackcoinutils.script import Script
+from blackcoinutils.utils import to_satoshis
 
 
 class TestCreateP2shTransaction(unittest.TestCase):

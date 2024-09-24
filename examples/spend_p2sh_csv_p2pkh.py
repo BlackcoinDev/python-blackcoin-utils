@@ -11,12 +11,12 @@
 # LICENSE file.
 
 
-from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
-from bitcoinutils.keys import P2pkhAddress, PrivateKey
-from bitcoinutils.script import Script
-from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
+from blackcoinutils.setup import setup
+from blackcoinutils.utils import to_satoshis
+from blackcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
+from blackcoinutils.keys import P2pkhAddress, PrivateKey
+from blackcoinutils.script import Script
+from blackcoinutils.constants import TYPE_RELATIVE_TIMELOCK
 
 
 def main():

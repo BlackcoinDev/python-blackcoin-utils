@@ -15,8 +15,8 @@ import hashlib
 import struct
 from typing import Any
 
-from bitcoinutils.ripemd160 import ripemd160
-from bitcoinutils.utils import b_to_h, h_to_b, vi_to_int
+from blackcoinutils.ripemd160 import ripemd160
+from blackcoinutils.utils import b_to_h, h_to_b, vi_to_int
 
 # import bitcoinutils.keys
 

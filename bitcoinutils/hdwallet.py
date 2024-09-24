@@ -15,8 +15,8 @@ from typing import Optional
 from hdwallet import HDWallet as ext_HDWallet  # type: ignore
 from hdwallet.symbols import BTC, BTCTEST  # type: ignore
 
-from bitcoinutils.setup import is_mainnet
-from bitcoinutils.keys import PrivateKey
+from blackcoinutils.setup import is_mainnet
+from blackcoinutils.keys import PrivateKey
 
 
 # class HDW:

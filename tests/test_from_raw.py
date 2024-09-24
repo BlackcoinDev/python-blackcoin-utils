@@ -13,8 +13,8 @@
 
 import unittest
 
-from bitcoinutils.setup import setup
-from bitcoinutils.transactions import Transaction
+from blackcoinutils.setup import setup
+from blackcoinutils.transactions import Transaction
 
 
 class TestFromRaw(unittest.TestCase):

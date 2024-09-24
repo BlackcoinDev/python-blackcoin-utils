@@ -11,8 +11,8 @@
 # LICENSE file.
 
 
-from bitcoinutils.setup import setup
-from bitcoinutils.proxy import NodeProxy
+from blackcoinutils.setup import setup
+from blackcoinutils.proxy import NodeProxy
 
 
 def main():

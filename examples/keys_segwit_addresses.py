@@ -11,9 +11,9 @@
 # LICENSE file.
 
 
-from bitcoinutils.setup import setup
-from bitcoinutils.script import Script
-from bitcoinutils.keys import P2wpkhAddress, P2wshAddress, P2shAddress, PrivateKey
+from blackcoinutils.setup import setup
+from blackcoinutils.script import Script
+from blackcoinutils.keys import P2wpkhAddress, P2wshAddress, P2shAddress, PrivateKey
 
 
 def main():

@@ -1,8 +1,8 @@
-from bitcoinutils.keys import P2shAddress, PrivateKey
-from bitcoinutils.script import Script
-from bitcoinutils.setup import setup
-from bitcoinutils.hdwallet import HDWallet
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
+from blackcoinutils.keys import P2shAddress, PrivateKey
+from blackcoinutils.script import Script
+from blackcoinutils.setup import setup
+from blackcoinutils.hdwallet import HDWallet
+from blackcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 
 setup("testnet")
 

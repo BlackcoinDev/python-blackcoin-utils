@@ -13,8 +13,8 @@
 
 import unittest
 
-from bitcoinutils.setup import setup
-from bitcoinutils.keys import (
+from blackcoinutils.setup import setup
+from blackcoinutils.keys import (
     PrivateKey,
     PublicKey,
     P2pkhAddress,
@@ -22,8 +22,8 @@ from bitcoinutils.keys import (
     P2wpkhAddress,
     P2wshAddress,
 )
-from bitcoinutils.script import Script
-from bitcoinutils.hdwallet import HDWallet
+from blackcoinutils.script import Script
+from blackcoinutils.hdwallet import HDWallet
 
 
 class TestPrivateKeys(unittest.TestCase):

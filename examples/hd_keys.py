@@ -11,8 +11,8 @@
 # LICENSE file.
 
 
-from bitcoinutils.setup import setup
-from bitcoinutils.hdwallet import HDWallet
+from blackcoinutils.setup import setup
+from blackcoinutils.hdwallet import HDWallet
 
 
 def main():

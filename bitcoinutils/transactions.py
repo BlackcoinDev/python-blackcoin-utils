@@ -15,7 +15,7 @@ import hashlib
 import struct
 from typing import Optional
 
-from bitcoinutils.constants import (
+from blackcoinutils.constants import (
     DEFAULT_TX_SEQUENCE,
     DEFAULT_TX_LOCKTIME,
     DEFAULT_TX_VERSION,
@@ -33,8 +33,8 @@ from bitcoinutils.constants import (
     TYPE_RELATIVE_TIMELOCK,
     TYPE_REPLACE_BY_FEE,
 )
-from bitcoinutils.script import Script
-from bitcoinutils.utils import (
+from blackcoinutils.script import Script
+from blackcoinutils.utils import (
     vi_to_int,
     encode_varint,
     tagged_hash,

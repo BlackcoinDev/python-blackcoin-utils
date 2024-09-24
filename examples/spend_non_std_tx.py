@@ -11,11 +11,11 @@
 # LICENSE file.
 
 
-from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput
-from bitcoinutils.keys import P2pkhAddress
-from bitcoinutils.script import Script
+from blackcoinutils.setup import setup
+from blackcoinutils.utils import to_satoshis
+from blackcoinutils.transactions import Transaction, TxInput, TxOutput
+from blackcoinutils.keys import P2pkhAddress
+from blackcoinutils.script import Script
 
 
 #

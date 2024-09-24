@@ -10,8 +10,8 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from bitcoinutils.setup import setup
-from bitcoinutils.keys import P2trAddress, PrivateKey
+from blackcoinutils.setup import setup
+from blackcoinutils.keys import P2trAddress, PrivateKey
 
 
 def main():

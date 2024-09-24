@@ -13,8 +13,8 @@
 from typing import Optional
 from bitcoinrpc.authproxy import AuthServiceProxy  # type: ignore
 
-from bitcoinutils.setup import get_network
-from bitcoinutils.constants import NETWORK_DEFAULT_PORTS
+from blackcoinutils.setup import get_network
+from blackcoinutils.constants import NETWORK_DEFAULT_PORTS
 
 
 class NodeProxy:

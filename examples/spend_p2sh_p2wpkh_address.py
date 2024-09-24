@@ -10,11 +10,11 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis
-from bitcoinutils.keys import PrivateKey, P2pkhAddress
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
-from bitcoinutils.script import Script
+from blackcoinutils.setup import setup
+from blackcoinutils.utils import to_satoshis
+from blackcoinutils.keys import PrivateKey, P2pkhAddress
+from blackcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
+from blackcoinutils.script import Script
 
 
 def main():

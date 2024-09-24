@@ -3,11 +3,11 @@ import hashlib
 from typing import Optional, Union
 from datetime import datetime, timezone
 
-from bitcoinutils.utils import h_to_b, parse_compact_size, get_transaction_length
+from blackcoinutils.utils import h_to_b, parse_compact_size, get_transaction_length
 
-from bitcoinutils.transactions import Transaction
+from blackcoinutils.transactions import Transaction
 
-from bitcoinutils.constants import HEADER_SIZE, BLOCK_MAGIC_NUMBER
+from blackcoinutils.constants import HEADER_SIZE, BLOCK_MAGIC_NUMBER
 
 import os
 

@@ -11,17 +11,17 @@
 # LICENSE file.
 
 
-from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis
-from bitcoinutils.transactions import (
+from blackcoinutils.setup import setup
+from blackcoinutils.utils import to_satoshis
+from blackcoinutils.transactions import (
     Transaction,
     TxInput,
     TxOutput,
     TxWitnessInput,
     Locktime,
 )
-from bitcoinutils.keys import P2pkhAddress, PrivateKey
-from bitcoinutils.script import Script
+from blackcoinutils.keys import P2pkhAddress, PrivateKey
+from blackcoinutils.script import Script
 
 
 def test_non_segwit():

@@ -13,17 +13,17 @@
 
 import unittest
 
-from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis, ControlBlock
-from bitcoinutils.keys import PrivateKey, P2pkhAddress
-from bitcoinutils.constants import (
+from blackcoinutils.setup import setup
+from blackcoinutils.utils import to_satoshis, ControlBlock
+from blackcoinutils.keys import PrivateKey, P2pkhAddress
+from blackcoinutils.constants import (
     SIGHASH_ALL,
     SIGHASH_SINGLE,
     SIGHASH_NONE,
     SIGHASH_ANYONECANPAY,
 )
-from bitcoinutils.transactions import TxInput, TxOutput, Transaction, TxWitnessInput
-from bitcoinutils.script import Script
+from blackcoinutils.transactions import TxInput, TxOutput, Transaction, TxWitnessInput
+from blackcoinutils.script import Script
 
 
 class TestCreateP2trTransaction(unittest.TestCase):

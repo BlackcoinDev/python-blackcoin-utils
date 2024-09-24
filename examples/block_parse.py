@@ -6,8 +6,8 @@ root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if root_path not in sys.path:
     sys.path.append(root_path)
 
-from bitcoinutils.block import Block
-from bitcoinutils.constants import BLOCK_MAGIC_NUMBER
+from blackcoinutils.block import Block
+from blackcoinutils.constants import BLOCK_MAGIC_NUMBER
 
 def main():
     filename = '' # Give .dat file path to run example 

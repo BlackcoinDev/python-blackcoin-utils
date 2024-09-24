@@ -11,8 +11,8 @@
 # LICENSE file.
 
 
-from bitcoinutils.setup import setup
-from bitcoinutils.keys import PrivateKey, PublicKey
+from blackcoinutils.setup import setup
+from blackcoinutils.keys import PrivateKey, PublicKey
 
 
 def main():

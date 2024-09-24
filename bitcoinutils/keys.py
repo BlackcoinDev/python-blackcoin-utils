@@ -33,7 +33,7 @@ from ecdsa import (  # type: ignore
 from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der  # type: ignore
 from sympy.ntheory import sqrt_mod  # type: ignore
 
-from bitcoinutils.constants import (
+from blackcoinutils.constants import (
     NETWORK_WIF_PREFIXES,
     NETWORK_P2PKH_PREFIXES,
     NETWORK_P2SH_PREFIXES,
@@ -46,11 +46,11 @@ from bitcoinutils.constants import (
     NETWORK_SEGWIT_PREFIXES,
     TAPROOT_SIGHASH_ALL,
 )
-from bitcoinutils.setup import get_network
-from bitcoinutils.ripemd160 import ripemd160
-from bitcoinutils.schnorr import schnorr_sign
-from bitcoinutils.transactions import Transaction
-from bitcoinutils.utils import (
+from blackcoinutils.setup import get_network
+from blackcoinutils.ripemd160 import ripemd160
+from blackcoinutils.schnorr import schnorr_sign
+from blackcoinutils.transactions import Transaction
+from blackcoinutils.utils import (
     Secp256k1Params,
     calculate_tweak,
     add_magic_prefix,
@@ -62,7 +62,7 @@ from bitcoinutils.utils import (
     tweak_taproot_pubkey,
     tweak_taproot_privkey,
 )
-from bitcoinutils.script import Script
+from blackcoinutils.script import Script
 
 
 import bitcoinutils.bech32

@@ -10,12 +10,12 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis
-from bitcoinutils.script import Script
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
-from bitcoinutils.keys import PrivateKey
-from bitcoinutils.hdwallet import HDWallet
+from blackcoinutils.setup import setup
+from blackcoinutils.utils import to_satoshis
+from blackcoinutils.script import Script
+from blackcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
+from blackcoinutils.keys import PrivateKey
+from blackcoinutils.hdwallet import HDWallet
 
 
 def main():

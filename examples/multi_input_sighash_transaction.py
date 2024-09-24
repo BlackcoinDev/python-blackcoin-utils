@@ -11,12 +11,12 @@
 # LICENSE file.
 
 
-from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput
-from bitcoinutils.keys import P2pkhAddress, PrivateKey
-from bitcoinutils.script import Script
-from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
+from blackcoinutils.setup import setup
+from blackcoinutils.utils import to_satoshis
+from blackcoinutils.transactions import Transaction, TxInput, TxOutput
+from blackcoinutils.keys import P2pkhAddress, PrivateKey
+from blackcoinutils.script import Script
+from blackcoinutils.constants import SIGHASH_ALL, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
 
 
 def main():

@@ -12,17 +12,17 @@
 
 import unittest
 
-from bitcoinutils.setup import setup
-from bitcoinutils.keys import PrivateKey
-from bitcoinutils.constants import (
+from blackcoinutils.setup import setup
+from blackcoinutils.keys import PrivateKey
+from blackcoinutils.constants import (
     SIGHASH_ALL,
     SIGHASH_NONE,
     SIGHASH_SINGLE,
     SIGHASH_ANYONECANPAY,
 )
-from bitcoinutils.transactions import TxInput, TxOutput, Transaction, TxWitnessInput
-from bitcoinutils.script import Script
-from bitcoinutils.utils import to_satoshis
+from blackcoinutils.transactions import TxInput, TxOutput, Transaction, TxWitnessInput
+from blackcoinutils.script import Script
+from blackcoinutils.utils import to_satoshis
 
 
 class TestCreateP2wpkhTransaction(unittest.TestCase):

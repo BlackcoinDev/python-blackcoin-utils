@@ -5,9 +5,9 @@ name: Python application
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "blackcoinutils" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "blackcoinutils" ]
 
 permissions:
   contents: read

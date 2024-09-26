@@ -1,3 +1,5 @@
+[![Python application](https://github.com/CoinBlack/python-blackcoin-utils/actions/workflows/python-app.yml/badge.svg)](https://github.com/CoinBlack/python-blackcoin-utils/actions/workflows/python-app.yml)
+
 python-blackcoin-utils
 ====================
 

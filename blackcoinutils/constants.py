@@ -19,9 +19,9 @@ NETWORK_DEFAULT_PORTS = {
 
 NETWORK_WIF_PREFIXES = {
     "mainnet": b"\x99",
-    "signet": b"\xef",
-    "testnet": b"\xef",
-    "regtest": b"\xef",
+    "signet": b"\x64",
+    "testnet": b"\x64",
+    "regtest": b"\x64",
 }
 
 NETWORK_P2PKH_PREFIXES = {
@@ -40,7 +40,7 @@ NETWORK_P2SH_PREFIXES = {
 
 NETWORK_SEGWIT_PREFIXES = {
     "mainnet": "blk",
-    "signet": "tb",
+    "signet": "tblk",
     "testnet": "tblk",
     "regtest": "blrt",
 }
@@ -93,8 +93,8 @@ NEGATIVE_SATOSHI = -1
 HEADER_SIZE = 80
 
 BLOCK_MAGIC_NUMBER = {
-    "f9beb4d9" : "mainnet",
-    "0b110907" : "testnet",
-    "fabfb5da" : "regtest",
+    "70352205" : "mainnet",
+    "cdf2c0ef" : "testnet",
+    "70352206" : "regtest",
     "0a03cf40" : "signet"
 }

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 import hashlib
 from ecdsa import ellipticcurve  # type: ignore
-from blackcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
+from blackcoinutils.constants import SATOSHIS_PER_BLACKCOIN, LEAF_VERSION_TAPSCRIPT
 from blackcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
 import struct
 
@@ -179,7 +179,7 @@ def to_satoshis(num: int | float | Decimal):
     """
     # we need to round because of how floats are stored internally:
     # e.g. 0.29 * 100000000 = 28999999.999999996
-    return int(round(num * SATOSHIS_PER_BITCOIN))
+    return int(round(num * SATOSHIS_PER_BLACKCOIN))
 
 
 def prepend_compact_size(data: bytes) -> bytes:

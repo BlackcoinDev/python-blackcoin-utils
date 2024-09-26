@@ -13,7 +13,7 @@
 from typing import Optional
 
 from hdwallet import HDWallet as ext_HDWallet  # type: ignore
-from hdwallet.symbols import BTC, BTCTEST  # type: ignore
+from hdwallet.symbols import BLK, BLKTEST  # type: ignore
 
 from blackcoinutils.setup import is_mainnet
 from blackcoinutils.keys import PrivateKey
@@ -39,13 +39,13 @@ class HDWallet:
         path: Optional[str] = None,
         mnemonic: Optional[str] = None,
     ):
-        """Instantiate a hdwallet object using the corresponding library with BTC"""
+        """Instantiate a hdwallet object using the corresponding library with BLK"""
 
         symbol = None
         if is_mainnet():
-            symbol = BTC
+            symbol = BLK
         else:
-            symbol = BTCTEST
+            symbol = BLKTEST
 
         self.hdw = ext_HDWallet(symbol)
 
